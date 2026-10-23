@@ -8,6 +8,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
+use Illuminate\Auth\Events\PasswordReset;
 
 class AuthController extends Controller
 {
@@ -93,4 +96,76 @@ class AuthController extends Controller
             'message' => 'Logout successful',
         ]);
     }
+
+    /**
+     * Send a password reset link to the user's email.
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'success' => true,
+                'message' => 'If the email is registered, password reset instructions will be sent.',
+            ]);
+        }
+
+        if ($status === Password::INVALID_USER) {
+            return response()->json([
+                'success' => true,
+                'message' => 'If the email is registered, password reset instructions will be sent.',
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Unable to send password reset instructions. Please try again later.',
+        ], 500);
+    }
+
+    /**
+     * Reset the user's password using a valid reset token.
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $validated,
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                    'remember_token' => Str::random(60),
+                ])->save();
+
+                $user->tokens()->delete();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Password reset successful. Please log in with your new password.',
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'The reset token is invalid or has expired.',
+        ], 422);
+    }
+
 }

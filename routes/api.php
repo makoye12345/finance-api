@@ -17,6 +17,15 @@ Route::post('/register', [AuthController::class, 'register']);
 
 // Login
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [
+    \App\Http\Controllers\Api\AuthController::class,
+    'forgotPassword',
+]);
+
+Route::post('/reset-password', [
+    \App\Http\Controllers\Api\AuthController::class,
+    'resetPassword',
+]);
 
 
 // =====================================================
