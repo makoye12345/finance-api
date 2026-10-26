@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -9,3 +10,12 @@ Route::get('/', function () {
 
 Route::get('/profile', [ProfileController::class, 'show']);
 
+Route::get('/reset-password/{token}', function (
+    string $token,
+    \Illuminate\Http\Request $request
+) {
+    return view('auth.reset-password', [
+        'token' => $token,
+        'email' => $request->query('email', ''),
+    ]);
+})->name('password.reset');
